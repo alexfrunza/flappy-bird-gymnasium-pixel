@@ -21,7 +21,7 @@
 # SOFTWARE.
 # ==============================================================================
 
-""" Implementation of a Flappy Bird OpenAI gymnasium environment that yields simple
+"""Implementation of a Flappy Bird OpenAI gymnasium environment that yields simple
 numerical information about the game's state as observations.
 
 Some of the code in this module is an adaption of the code in the `FlapPyBird`
@@ -99,7 +99,8 @@ class FlappyBirdEnv(gymnasium.Env):
         screen_size: Tuple[int, int] = (288, 512),
         audio_on: bool = False,
         normalize_obs: bool = True,
-        use_lidar: bool = True,
+        use_lidar: bool = False,
+        use_pixels: bool = False,
         pipe_gap: int = 100,
         bird_color: str = "yellow",
         pipe_color: str = "green",
@@ -149,11 +150,14 @@ class FlappyBirdEnv(gymnasium.Env):
         self._ground = {"x": 0, "y": self._screen_height * 0.79}
         self._base_shift = BASE_WIDTH - BACKGROUND_WIDTH
 
-        if use_lidar:
-            self._lidar = LIDAR(LIDAR_MAX_DISTANCE)
-            self._get_observation = self._get_observation_lidar
+        if use_pixels:
+            self._get_observation = self._get_observation_pixels
         else:
-            self._get_observation = self._get_observation_features
+            if use_lidar:
+                self._lidar = LIDAR(LIDAR_MAX_DISTANCE)
+                self._get_observation = self._get_observation_lidar
+            else:
+                self._get_observation = self._get_observation_features
 
         if render_mode is not None:
             self._fps_clock = pygame.time.Clock()
@@ -399,7 +403,7 @@ class FlappyBirdEnv(gymnasium.Env):
             # Flip the image to retrieve a correct aspect
             return np.transpose(pygame.surfarray.array3d(self._surface), axes=(1, 0, 2))
         else:
-            self._draw_surface(show_score=True, show_rays=self._use_lidar)
+            self._draw_surface(show_score=False, show_rays=self._use_lidar)
             if self._display is None:
                 self._make_display()
 
@@ -474,6 +478,10 @@ class FlappyBirdEnv(gymnasium.Env):
                         return True
 
         return False
+
+    def _get_observation_pixels(self) -> Tuple[np.ndarray, None]:
+        res = np.transpose(pygame.surfarray.array3d(self._surface), axes=(1, 0, 2))
+        return (res, None)
 
     def _get_observation_features(self) -> np.ndarray:
         pipes = []
