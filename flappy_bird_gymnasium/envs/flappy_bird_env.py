@@ -107,12 +107,14 @@ class FlappyBirdEnv(gymnasium.Env):
         render_mode: Optional[str] = None,
         background: Optional[str] = "day",
         score_limit: Optional[int] = None,
+        training_mode: bool = False,
         debug: bool = False,
     ) -> None:
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
         self._debug = debug
         self._score_limit = score_limit
+        self.training_mode = training_mode
 
         self.action_space = gymnasium.spaces.Discrete(2)
         if use_lidar:
@@ -124,6 +126,10 @@ class FlappyBirdEnv(gymnasium.Env):
                 self.observation_space = gymnasium.spaces.Box(
                     0.0, np.inf, shape=(180,), dtype=np.float64
                 )
+        elif use_pixels:
+            self.observation_space = gymnasium.spaces.Box(
+                0.0, 1.0, shape=(512, 288, 3), dtype=np.float64
+            )
         else:
             if normalize_obs:
                 self.observation_space = gymnasium.spaces.Box(
@@ -398,10 +404,18 @@ class FlappyBirdEnv(gymnasium.Env):
 
     def render(self) -> None:
         """Renders the next frame."""
+        ## If training mode is set, there will be no window in which the game is render
+        if self.training_mode:
+            self._draw_surface(show_score=False, show_rays=False)
+            return
+
         if self.render_mode == "rgb_array":
+            # This is not used idk is with this code
             self._draw_surface(show_score=False, show_rays=False)
             # Flip the image to retrieve a correct aspect
-            return np.transpose(pygame.surfarray.array3d(self._surface), axes=(1, 0, 2))
+            v = np.transpose(pygame.surfarray.array3d(self._surface), axes=(1, 0, 2))
+            # print("Matricea din cod", v)
+            # return v
         else:
             self._draw_surface(show_score=False, show_rays=self._use_lidar)
             if self._display is None:
